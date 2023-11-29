@@ -1,33 +1,36 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import TicTacToeLayouts from './TicTacToeLayouts';
 import store from '../store';
 import { updateButtonText, toggleXRound, setWinner, resetGame } from '../actions/gameAction';
 
-class TicTacToeContainer extends Component {
-    componentDidMount() {
-        this.unsubscribe = store.subscribe(() => this.forceUpdate());
-    }
+const TicTacToeContainer = () => {
+    const [gameState, setGameState] = useState(store.getState().game);
 
-    componentWillUnmount() {
-        this.unsubscribe();
-    }
+    useEffect(() => {
+        const unsubscribe = store.subscribe(() => {
+            setGameState(store.getState().game);
+        });
+        return () => {
+            unsubscribe();
+        };
+    }, []);
 
-    onClickCell(index) {
-        const state = store.getState().game;
-        const buttonText = [...state.buttonText];
-        if (buttonText[index] === "" && state.winner === null) {
-            buttonText[index] = state.xRound ? "X" : "O";
-            store.dispatch(updateButtonText(buttonText));
-            this.whoIsWinner(buttonText);
+    const onClickCell = (index) => {
+        const { buttonText, xRound, winner } = gameState;
+        if (buttonText[index] === "" && winner === null) {
+            const newText = [...buttonText];
+            newText[index] = xRound ? "X" : "O";
+            store.dispatch(updateButtonText(newText));
+            checkWinner(newText, winner);
             store.dispatch(toggleXRound());
         }
-    }
+    };
 
-    onNewGame() {
+    const onNewGame = () => {
         store.dispatch(resetGame());
-    }
+    };
 
-    whoIsWinner(buttonText) {
+    const checkWinner = (newText, currentWinner) => {
         const winPatterns = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8],
             [0, 3, 6], [1, 4, 7], [2, 5, 8],
@@ -37,32 +40,29 @@ class TicTacToeContainer extends Component {
         for (const pattern of winPatterns) {
             const [a, b, c] = pattern;
             if (
-                buttonText[a] &&
-                buttonText[a] === buttonText[b] &&
-                buttonText[a] === buttonText[c]
+                newText[a] &&
+                newText[a] === newText[b] &&
+                newText[a] === newText[c]
             ) {
-                store.dispatch(setWinner(`Победил ${buttonText[a]}`));
+                store.dispatch(setWinner(`Победил ${newText[a]}`));
                 return;
             }
         }
 
-        if (!buttonText.includes("") && !store.getState().game.winner) {
+        if (!newText.includes("") && currentWinner === null) {
             store.dispatch(setWinner("Ничья"));
         }
-    }
+    };
 
-    render() {
-        const { buttonText, xRound, winner } = store.getState().game;
-        return (
-            <TicTacToeLayouts
-                buttonText={buttonText}
-                xRound={xRound}
-                winner={winner}
-                onClickCell={this.onClickCell.bind(this)}
-                onNewGame={this.onNewGame.bind(this)}
-            />
-        );
-    }
-}
+    return (
+        <TicTacToeLayouts
+            buttonText={gameState.buttonText}
+            xRound={gameState.xRound}
+            winner={gameState.winner}
+            onClickCell={onClickCell}
+            onNewGame={onNewGame}
+        />
+    );
+};
 
 export default TicTacToeContainer;
